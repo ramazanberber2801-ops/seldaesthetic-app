@@ -36,6 +36,8 @@ import {
   listLoyalty,
   getLoyaltyHistory,
   BACKEND_ORIGIN,
+  deleteCustomer,
+  transferStamps,
 } from "@/lib/api";
 
 export default function Admin() {

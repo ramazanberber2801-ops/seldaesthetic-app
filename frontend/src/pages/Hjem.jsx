@@ -23,9 +23,6 @@ export default function Hjem() {
     <div data-testid="page-hjem">
       {/* Hero */}
       <section className="pt-12 pb-8 px-6 text-center fade-up">
-        <div className="mx-auto w-16 h-16 rounded-full bg-[#F4ECD8] flex items-center justify-center mb-6 shadow-sm">
-          <span className="font-serif-display text-3xl text-[#B89953] -mt-0.5">S</span>
-        </div>
         <h1 className="font-serif-display text-5xl text-[#2C2A26] leading-none">
           Seldaesthetic
         </h1>
