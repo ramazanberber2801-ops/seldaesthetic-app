@@ -891,6 +891,75 @@ function HistoryTab() {
           ))}
         </div>
       )}
+
+      {/* Registrerte Kunder */}
+      <RegisteredCustomers list={list} loading={loading} />
     </div>
+  );
+}
+
+function RegisteredCustomers({ list, loading }) {
+  const [q, setQ] = useState("");
+  const registered = list.filter((c) => c.name && c.phone);
+  const ql = q.trim().toLowerCase();
+  const filtered = ql
+    ? registered.filter(
+        (c) =>
+          (c.name || "").toLowerCase().includes(ql) ||
+          (c.phone || "").toLowerCase().includes(ql)
+      )
+    : registered;
+
+  return (
+    <section className="mt-8 pt-6 border-t border-[#EBE5DC]" data-testid="registered-customers">
+      <h3 className="font-serif-display text-2xl text-[#2C2A26] mb-3">
+        Registrerte Kunder
+        <span className="ml-2 text-xs bg-[#F4ECD8] text-[#8C6B2F] px-2 py-0.5 rounded-full align-middle">
+          {registered.length}
+        </span>
+      </h3>
+
+      <div className="relative mb-3">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9C968C]" strokeWidth={1.5} />
+        <Input
+          placeholder="Søk etter navn eller mobilnummer..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          data-testid="registered-search"
+          className="pl-10 rounded-2xl h-11 border-[#EBE5DC] bg-white"
+        />
+      </div>
+
+      {loading ? (
+        <div className="text-center py-6 text-[#6B655B] text-sm">Laster...</div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl p-6 text-center border border-[#EBE5DC]/60 text-[#6B655B] text-sm">
+          {registered.length === 0
+            ? "Ingen kunder har sikret kortet sitt ennå."
+            : "Ingen treff."}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-[#EBE5DC]/60 overflow-hidden" data-testid="registered-list">
+          <div className="grid grid-cols-[1.4fr_1.1fr_0.6fr] gap-2 px-4 py-2.5 bg-[#FDFBF7] border-b border-[#EBE5DC] text-[10px] tracking-[0.2em] uppercase text-[#6B655B]">
+            <span>Navn</span>
+            <span>Mobilnummer</span>
+            <span className="text-right">Stempler</span>
+          </div>
+          {filtered.map((c) => (
+            <div
+              key={c.device_id}
+              data-testid={`registered-row-${c.device_id}`}
+              className="grid grid-cols-[1.4fr_1.1fr_0.6fr] gap-2 px-4 py-3 items-center border-b border-[#EBE5DC]/60 last:border-0 hover:bg-[#FDFBF7]"
+            >
+              <span className="text-sm text-[#2C2A26] truncate">{c.name}</span>
+              <span className="text-xs text-[#6B655B] truncate">{c.phone}</span>
+              <span className="text-right text-xs font-medium text-[#8C6B2F]">
+                {c.stamps}/10
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
