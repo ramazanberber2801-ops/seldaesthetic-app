@@ -114,19 +114,14 @@ export default function Lojalitet() {
       <div className="px-5 mt-6">
         {/* Card */}
         <div className="bg-white rounded-3xl p-6 border border-[#EBE5DC]/60 shadow-[0_8px_32px_rgba(44,42,38,0.06)] fade-up">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <p className="font-serif-display text-2xl text-[#2C2A26] leading-none">
-                Stempelkort
-              </p>
-              <p className="text-xs text-[#6B655B] mt-1">
-                {stamps}/10 stempler
-                {completed > 0 ? ` • ${completed} fullført` : ""}
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-[#F4ECD8] flex items-center justify-center">
-              <span className="font-serif-display text-2xl text-[#B89953] -mt-0.5">S</span>
-            </div>
+          <div className="mb-5">
+            <p className="font-serif-display text-2xl text-[#2C2A26] leading-none">
+              Stempelkort
+            </p>
+            <p className="text-xs text-[#6B655B] mt-1">
+              {stamps}/10 stempler
+              {completed > 0 ? ` • ${completed} fullført` : ""}
+            </p>
           </div>
 
           {/* Stamps grid */}
