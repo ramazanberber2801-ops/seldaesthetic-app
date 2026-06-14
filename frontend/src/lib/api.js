@@ -57,6 +57,17 @@ export const saveLoyaltyProfile = (deviceId, name, phone) =>
       { headers: { "Content-Type": "application/json" } }
     )
     .then((r) => r.data);
+
+export const deleteCustomer = (deviceId) =>
+  api.delete(`/admin/loyalty/${deviceId}`).then((r) => r.data);
+
+export const transferStamps = (fromDeviceId, toDeviceId) =>
+  api
+    .post("/admin/loyalty/transfer", {
+      from_device_id: fromDeviceId,
+      to_device_id: toDeviceId,
+    })
+    .then((r) => r.data);
 export const listLoyalty = () => api.get("/admin/loyalty").then((r) => r.data);
 export const getLoyaltyHistory = (deviceId) =>
   api.get(`/admin/loyalty/${deviceId}/history`).then((r) => r.data);

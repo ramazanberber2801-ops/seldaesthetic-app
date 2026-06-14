@@ -330,6 +330,56 @@ async def stamp_loyalty(payload: LoyaltyAction):
     )
 
 
+class TransferPayload(BaseModel):
+    from_device_id: str
+    to_device_id: str
+
+
+@api_router.delete("/admin/loyalty/{device_id}", dependencies=[Depends(require_admin)])
+async def delete_loyalty(device_id: str):
+    res = await db.loyalty.delete_one({"device_id": device_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Kort ikke funnet")
+    await db.loyalty_events.delete_many({"device_id": device_id})
+    return {"deleted": True}
+
+
+@api_router.post("/admin/loyalty/transfer", dependencies=[Depends(require_admin)])
+async def transfer_loyalty(payload: TransferPayload):
+    if payload.from_device_id == payload.to_device_id:
+        raise HTTPException(status_code=400, detail="Kilde og mål er samme kort")
+    src = await db.loyalty.find_one({"device_id": payload.from_device_id})
+    dst = await db.loyalty.find_one({"device_id": payload.to_device_id})
+    if not src:
+        raise HTTPException(status_code=404, detail="Kildekort ikke funnet")
+    if not dst:
+        raise HTTPException(status_code=404, detail="Målkort ikke funnet")
+    now = datetime.now(timezone.utc)
+    merged = min(10, int(src.get("stamps", 0)) + int(dst.get("stamps", 0)))
+    new_total = int(dst.get("total_completed", 0)) + int(src.get("total_completed", 0))
+    update = {"stamps": merged, "total_completed": new_total, "last_stamped_at": now.isoformat()}
+    if not dst.get("name") and src.get("name"):
+        update["name"] = src["name"]
+    if not dst.get("phone") and src.get("phone"):
+        update["phone"] = src["phone"]
+    await db.loyalty.update_one({"device_id": payload.to_device_id}, {"$set": update})
+    await db.loyalty.delete_one({"device_id": payload.from_device_id})
+    await db.loyalty_events.update_many(
+        {"device_id": payload.from_device_id},
+        {"$set": {"device_id": payload.to_device_id}},
+    )
+    await db.loyalty_events.insert_one(_ser({
+        "id": str(uuid.uuid4()),
+        "device_id": payload.to_device_id,
+        "type": "transfer",
+        "stamps_after": merged,
+        "milestone": None,
+        "created_at": now,
+    }))
+    updated = await db.loyalty.find_one({"device_id": payload.to_device_id})
+    return {"merged_stamps": merged, "card": LoyaltyCard(**_clean(updated)).model_dump()}
+
+
 @api_router.post("/loyalty/reset", response_model=LoyaltyCard, dependencies=[Depends(require_admin)])
 async def reset_loyalty(payload: LoyaltyAction):
     doc = await db.loyalty.find_one({"device_id": payload.device_id})

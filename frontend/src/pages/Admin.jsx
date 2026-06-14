@@ -893,13 +893,21 @@ function HistoryTab() {
       )}
 
       {/* Registrerte Kunder */}
-      <RegisteredCustomers list={list} loading={loading} />
+      <RegisteredCustomers
+        list={list}
+        loading={loading}
+        onChange={() => listLoyalty().then(setList).catch(() => {})}
+      />
     </div>
   );
 }
 
-function RegisteredCustomers({ list, loading }) {
+function RegisteredCustomers({ list, loading, onChange }) {
   const [q, setQ] = useState("");
+  const [transferFrom, setTransferFrom] = useState(null);
+  const [targetQuery, setTargetQuery] = useState("");
+  const [busy, setBusy] = useState(false);
+
   const registered = list.filter((c) => c.name && c.phone);
   const ql = q.trim().toLowerCase();
   const filtered = ql
@@ -909,6 +917,55 @@ function RegisteredCustomers({ list, loading }) {
           (c.phone || "").toLowerCase().includes(ql)
       )
     : registered;
+
+  const handleDelete = async (c) => {
+    if (!window.confirm(`Er du sikker på at du vil slette ${c.name} og alle tilhørende stempler?`)) return;
+    setBusy(true);
+    try {
+      await deleteCustomer(c.device_id);
+      toast.success(`${c.name} slettet`);
+      onChange?.();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Kunne ikke slette");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleTransfer = async (target) => {
+    if (!transferFrom) return;
+    if (!window.confirm(
+      `Overfør ${transferFrom.stamps} stempler fra ${transferFrom.name} til ${target.name}?\n\nKildekortet vil bli slettet.`
+    )) return;
+    setBusy(true);
+    try {
+      const res = await transferStamps(transferFrom.device_id, target.device_id);
+      toast.success(`Overført! ${target.name} har nå ${res.merged_stamps}/10 stempler.`);
+      setTransferFrom(null);
+      setTargetQuery("");
+      onChange?.();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Kunne ikke overføre");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Transfer target picker
+  const targets = transferFrom
+    ? list
+        .filter((c) => c.device_id !== transferFrom.device_id)
+        .filter((c) => {
+          const tq = targetQuery.trim().toLowerCase();
+          if (!tq) return true;
+          return (
+            (c.name || "").toLowerCase().includes(tq) ||
+            (c.phone || "").toLowerCase().includes(tq) ||
+            c.device_id.toLowerCase().includes(tq)
+          );
+        })
+        .slice(0, 20)
+    : [];
 
   return (
     <section className="mt-8 pt-6 border-t border-[#EBE5DC]" data-testid="registered-customers">
@@ -940,24 +997,112 @@ function RegisteredCustomers({ list, loading }) {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-[#EBE5DC]/60 overflow-hidden" data-testid="registered-list">
-          <div className="grid grid-cols-[1.4fr_1.1fr_0.6fr] gap-2 px-4 py-2.5 bg-[#FDFBF7] border-b border-[#EBE5DC] text-[10px] tracking-[0.2em] uppercase text-[#6B655B]">
+          <div className="grid grid-cols-[1.4fr_1.1fr_0.5fr_auto] gap-2 px-4 py-2.5 bg-[#FDFBF7] border-b border-[#EBE5DC] text-[10px] tracking-[0.2em] uppercase text-[#6B655B]">
             <span>Navn</span>
             <span>Mobilnummer</span>
             <span className="text-right">Stempler</span>
+            <span className="w-9" />
           </div>
           {filtered.map((c) => (
             <div
               key={c.device_id}
               data-testid={`registered-row-${c.device_id}`}
-              className="grid grid-cols-[1.4fr_1.1fr_0.6fr] gap-2 px-4 py-3 items-center border-b border-[#EBE5DC]/60 last:border-0 hover:bg-[#FDFBF7]"
+              className="grid grid-cols-[1.4fr_1.1fr_0.5fr_auto] gap-2 px-4 py-2.5 items-center border-b border-[#EBE5DC]/60 last:border-0 hover:bg-[#FDFBF7]"
             >
-              <span className="text-sm text-[#2C2A26] truncate">{c.name}</span>
+              <button
+                onClick={() => {
+                  setTransferFrom(c);
+                  setTargetQuery("");
+                }}
+                disabled={busy}
+                data-testid={`registered-transfer-${c.device_id}`}
+                className="text-left text-sm text-[#2C2A26] truncate hover:text-[#B89953]"
+                title="Klikk for å overføre stempler"
+              >
+                {c.name}
+              </button>
               <span className="text-xs text-[#6B655B] truncate">{c.phone}</span>
               <span className="text-right text-xs font-medium text-[#8C6B2F]">
                 {c.stamps}/10
               </span>
+              <button
+                onClick={() => handleDelete(c)}
+                disabled={busy}
+                aria-label="Slett kunde"
+                data-testid={`registered-delete-${c.device_id}`}
+                className="p-2 rounded-full text-[#9E4747] hover:bg-[#FCE8E8] active:scale-95 disabled:opacity-50"
+              >
+                <Trash2 size={14} strokeWidth={1.75} />
+              </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Transfer picker dialog */}
+      {transferFrom && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4"
+          onClick={() => !busy && setTransferFrom(null)}
+          data-testid="transfer-dialog"
+        >
+          <div
+            className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-[#EBE5DC]">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-serif-display text-xl text-[#2C2A26]">Overfør stempler</h4>
+                <button
+                  onClick={() => setTransferFrom(null)}
+                  className="p-1.5 rounded-full text-[#6B655B] hover:bg-[#F4F0EA]"
+                  aria-label="Lukk"
+                  data-testid="transfer-close"
+                >
+                  <X size={16} strokeWidth={1.5} />
+                </button>
+              </div>
+              <p className="text-xs text-[#6B655B]">
+                Fra <span className="font-medium text-[#2C2A26]">{transferFrom.name}</span> ({transferFrom.stamps}/10) → velg ny mottaker
+              </p>
+              <div className="relative mt-3">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9C968C]" strokeWidth={1.5} />
+                <Input
+                  autoFocus
+                  value={targetQuery}
+                  onChange={(e) => setTargetQuery(e.target.value)}
+                  placeholder="Søk navn, telefon eller ID..."
+                  data-testid="transfer-search"
+                  className="pl-9 rounded-2xl h-10 border-[#EBE5DC]"
+                />
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1 p-2">
+              {targets.length === 0 ? (
+                <div className="text-center text-sm text-[#6B655B] py-6">Ingen treff.</div>
+              ) : (
+                targets.map((t) => (
+                  <button
+                    key={t.device_id}
+                    onClick={() => handleTransfer(t)}
+                    disabled={busy}
+                    data-testid={`transfer-target-${t.device_id}`}
+                    className="w-full text-left rounded-2xl p-3 hover:bg-[#FDFBF7] active:scale-[0.99] disabled:opacity-50 flex items-center gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-[#2C2A26] truncate">
+                        {t.name || <span className="font-mono text-xs">{t.device_id}</span>}
+                      </div>
+                      <div className="text-xs text-[#6B655B] truncate">{t.phone || "—"}</div>
+                    </div>
+                    <span className="text-xs bg-[#F4ECD8] text-[#8C6B2F] px-2 py-0.5 rounded-full">
+                      {t.stamps}/10
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </section>
