@@ -650,7 +650,6 @@ function ImageUploader({ value, onChange }) {
             ref={inputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             data-testid="offer-image-file-input"
             className="hidden"
             onChange={(e) => handleFile(e.target.files?.[0])}
