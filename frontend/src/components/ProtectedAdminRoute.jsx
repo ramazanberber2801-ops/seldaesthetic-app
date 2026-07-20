@@ -23,5 +23,9 @@ export default function ProtectedAdminRoute({ children }) {
     return <Navigate to="/profil" replace />;
   }
 
+  // Temporary compatibility for the existing Admin page component.
+  // Access is still decided only by the verified Supabase admin role above.
+  sessionStorage.setItem("seld_admin", "1");
+
   return children;
 }
