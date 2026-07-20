@@ -10,12 +10,7 @@ export default function Login() {
   const [mode, setMode] = useState(searchParams.get("mode") === "signup" ? "signup" : "login");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", password: "" });
 
   const updateField = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
@@ -90,22 +85,10 @@ export default function Login() {
 
         <section className="mt-6 rounded-3xl border border-[#EBE5DC] bg-white p-6 shadow-sm">
           <div className="flex rounded-2xl bg-[#F0E9DF] p-1">
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium ${
-                mode === "login" ? "bg-white text-[#2C2A26] shadow-sm" : "text-[#6B655B]"
-              }`}
-            >
+            <button type="button" onClick={() => setMode("login")} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium ${mode === "login" ? "bg-white text-[#2C2A26] shadow-sm" : "text-[#6B655B]"}`}>
               Logg inn
             </button>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium ${
-                mode === "signup" ? "bg-white text-[#2C2A26] shadow-sm" : "text-[#6B655B]"
-              }`}
-            >
+            <button type="button" onClick={() => setMode("signup")} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium ${mode === "signup" ? "bg-white text-[#2C2A26] shadow-sm" : "text-[#6B655B]"}`}>
               Opprett konto
             </button>
           </div>
@@ -114,9 +97,7 @@ export default function Login() {
             {mode === "login" ? "Velkommen tilbake" : "Opprett kundekonto"}
           </h1>
           <p className="mt-2 text-sm leading-6 text-[#6B655B]">
-            {mode === "login"
-              ? "Logg inn for å se profilen og lojalitetskortet ditt."
-              : "Kontoen brukes til lojalitetskort, tilbud og varsler."}
+            {mode === "login" ? "Logg inn for å se profilen og lojalitetskortet ditt." : "Kontoen brukes til lojalitetskort, tilbud og varsler."}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -137,7 +118,7 @@ export default function Login() {
 
             <Field icon={LockKeyhole} label="Passord">
               <input required minLength={6} type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={form.password} onChange={updateField("password")} className="w-full bg-transparent text-sm outline-none" placeholder="Minst 6 tegn" />
-              <button type="button" onClick={() => setShowPassword((value) => !value)}>
+              <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Skjul passord" : "Vis passord"}>
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </Field>
