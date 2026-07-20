@@ -11,18 +11,26 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-
-const items = [
-  { to: "/", label: "Hjem", icon: Home, end: true },
-  { to: "/bestill", label: "Bestill time", icon: CalendarCheck },
-  { to: "/lojalitet", label: "Lojalitetskort", icon: Heart },
-  { to: "/gavekort", label: "Gavekort", icon: Gift },
-  { to: "/profil", label: "Logg inn / Opprett konto", icon: UserRound },
-  { to: "/kontakt", label: "Kontakt", icon: MapPin },
-  { to: "/om", label: "Om Seldaesthetic", icon: Info },
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function BurgerMenu({ open, onOpen, onClose }) {
+  const { user, profile, loading } = useAuth();
+  const profileLabel = loading
+    ? "Min profil"
+    : user
+      ? profile?.full_name || user?.user_metadata?.full_name || "Min profil"
+      : "Logg inn / Opprett konto";
+
+  const items = [
+    { to: "/", label: "Hjem", icon: Home, end: true },
+    { to: "/bestill", label: "Bestill time", icon: CalendarCheck },
+    { to: "/lojalitet", label: "Lojalitetskort", icon: Heart },
+    { to: "/gavekort", label: "Gavekort", icon: Gift },
+    { to: "/profil", label: profileLabel, icon: UserRound },
+    { to: "/kontakt", label: "Kontakt", icon: MapPin },
+    { to: "/om", label: "Om Seldaesthetic", icon: Info },
+  ];
+
   useEffect(() => {
     if (!open) return undefined;
 
@@ -44,11 +52,8 @@ export default function BurgerMenu({ open, onOpen, onClose }) {
     event.preventDefault();
     event.stopPropagation();
 
-    if (open) {
-      onClose();
-    } else {
-      onOpen();
-    }
+    if (open) onClose();
+    else onOpen();
   };
 
   return (
@@ -89,7 +94,9 @@ export default function BurgerMenu({ open, onOpen, onClose }) {
         >
           <div className="px-6 pt-[max(env(safe-area-inset-top),1.25rem)] pb-5 pr-20 border-b border-[#EBE5DC]">
             <p className="font-serif text-xl text-[#2C2A26]">Seldaesthetic</p>
-            <p className="text-xs text-[#8A8378] mt-1">Din klinikkapp</p>
+            <p className="text-xs text-[#8A8378] mt-1">
+              {user ? `Innlogget som ${profileLabel}` : "Din klinikkapp"}
+            </p>
           </div>
 
           <nav className="flex-1 overflow-y-auto px-4 py-5">
