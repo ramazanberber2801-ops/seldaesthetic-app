@@ -4,6 +4,9 @@ import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, Phone, UserRound } from "luc
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
+const PRODUCTION_URL = "https://seldaesthetic-app.vercel.app";
+const AUTH_REDIRECT_URL = `${PRODUCTION_URL}/profil`;
+
 export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -26,7 +29,7 @@ export default function Login() {
           email: form.email.trim(),
           password: form.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/profil`,
+            emailRedirectTo: AUTH_REDIRECT_URL,
             data: {
               full_name: form.name.trim(),
               phone: form.phone.trim(),
@@ -65,7 +68,7 @@ export default function Login() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim(), {
-        redirectTo: `${window.location.origin}/profil`,
+        redirectTo: AUTH_REDIRECT_URL,
       });
       if (error) throw error;
       toast.success("Lenke for nytt passord er sendt på e-post");
