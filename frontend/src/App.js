@@ -11,7 +11,7 @@ import Gavekort from "@/pages/Gavekort";
 import Profil from "@/pages/Profil";
 import Login from "@/pages/Login";
 import Om from "@/pages/Om";
-import Admin from "@/pages/Admin";
+import Admin from "@/pages/AdminV2";
 import InstallPrompt from "@/components/InstallPrompt";
 import { registerSW } from "@/registerSW";
 
