@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, Phone, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState("login");
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState(searchParams.get("mode") === "signup" ? "signup" : "login");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
@@ -122,70 +123,32 @@ export default function Login() {
             {mode === "signup" && (
               <>
                 <Field icon={UserRound} label="Navn">
-                  <input
-                    required
-                    value={form.name}
-                    onChange={updateField("name")}
-                    className="w-full bg-transparent text-sm outline-none"
-                    placeholder="Fullt navn"
-                  />
+                  <input required value={form.name} onChange={updateField("name")} className="w-full bg-transparent text-sm outline-none" placeholder="Fullt navn" />
                 </Field>
                 <Field icon={Phone} label="Telefon">
-                  <input
-                    required
-                    type="tel"
-                    value={form.phone}
-                    onChange={updateField("phone")}
-                    className="w-full bg-transparent text-sm outline-none"
-                    placeholder="Telefonnummer"
-                  />
+                  <input required type="tel" value={form.phone} onChange={updateField("phone")} className="w-full bg-transparent text-sm outline-none" placeholder="Telefonnummer" />
                 </Field>
               </>
             )}
 
             <Field icon={Mail} label="E-post">
-              <input
-                required
-                type="email"
-                autoComplete="email"
-                value={form.email}
-                onChange={updateField("email")}
-                className="w-full bg-transparent text-sm outline-none"
-                placeholder="navn@epost.no"
-              />
+              <input required type="email" autoComplete="email" value={form.email} onChange={updateField("email")} className="w-full bg-transparent text-sm outline-none" placeholder="navn@epost.no" />
             </Field>
 
             <Field icon={LockKeyhole} label="Passord">
-              <input
-                required
-                minLength={6}
-                type={showPassword ? "text" : "password"}
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                value={form.password}
-                onChange={updateField("password")}
-                className="w-full bg-transparent text-sm outline-none"
-                placeholder="Minst 6 tegn"
-              />
+              <input required minLength={6} type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={form.password} onChange={updateField("password")} className="w-full bg-transparent text-sm outline-none" placeholder="Minst 6 tegn" />
               <button type="button" onClick={() => setShowPassword((value) => !value)}>
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </Field>
 
             {mode === "login" && (
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                className="text-sm font-medium text-[#9A7B3F]"
-              >
+              <button type="button" onClick={handleForgotPassword} className="text-sm font-medium text-[#9A7B3F]">
                 Glemt passord?
               </button>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-2xl bg-[#2C2A26] px-4 py-3.5 text-sm font-medium text-white disabled:opacity-60"
-            >
+            <button type="submit" disabled={loading} className="w-full rounded-2xl bg-[#2C2A26] px-4 py-3.5 text-sm font-medium text-white disabled:opacity-60">
               {loading ? "Vennligst vent …" : mode === "login" ? "Logg inn" : "Opprett konto"}
             </button>
           </form>
