@@ -23,5 +23,10 @@ export default function ProtectedAdminRoute({ children }) {
     return <Navigate to="/profil" replace />;
   }
 
+  // The existing Admin page still checks this legacy session flag.
+  // Keep it in sync with the verified Supabase admin role so the page
+  // does not immediately redirect an authenticated administrator home.
+  sessionStorage.setItem("seld_admin", "1");
+
   return children;
 }
