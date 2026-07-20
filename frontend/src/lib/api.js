@@ -17,51 +17,186 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Public
-export const listOffers = () => api.get("/offers").then((r) => r.data);
-export const getLoyalty = (deviceId) => api.get(`/loyalty/${deviceId}`).then((r) => r.data);
+const throwIfError = (error) => {
+  if (error) throw error;
+};
 
-// Admin (verified by Supabase session + profiles.role = admin)
-export const adminVerify = () => api.get("/admin/verify").then((r) => r.data);
+const normalizeCard = (row, profile = null) => ({
+  device_id: row.user_id,
+  user_id: row.user_id,
+  stamps: row.stamps || 0,
+  total_completed: row.total_completed || 0,
+  last_stamped_at: row.last_stamped_at,
+  created_at: row.created_at,
+  name: profile?.full_name || null,
+  phone: profile?.phone || null,
+  email: profile?.email || null,
+});
+
+// Public offers still use the existing backend.
+export const listOffers = () => api.get("/offers").then((r) => r.data);
 export const createOffer = (data) => api.post("/offers", data).then((r) => r.data);
 export const updateOffer = (id, data) => api.put(`/offers/${id}`, data).then((r) => r.data);
 export const deleteOffer = (id) => api.delete(`/offers/${id}`).then((r) => r.data);
-export const stampLoyalty = (deviceId) =>
-  api.post("/loyalty/stamp", { device_id: deviceId }).then((r) => r.data);
-export const resetLoyalty = (deviceId) =>
-  api.post("/loyalty/reset", { device_id: deviceId }).then((r) => r.data);
-export const unstampLoyalty = (deviceId) =>
-  api.post("/loyalty/unstamp", { device_id: deviceId }).then((r) => r.data);
-export const saveLoyaltyProfile = (deviceId, name, phone) =>
-  axios
-    .post(
-      `${API}/loyalty/profile`,
-      { device_id: deviceId, name, phone },
-      { headers: { "Content-Type": "application/json" } }
-    )
-    .then((r) => r.data);
+export const adminVerify = () => api.get("/admin/verify").then((r) => r.data);
 
-export const deleteCustomer = (deviceId) =>
-  api.delete(`/admin/loyalty/${deviceId}`).then((r) => r.data);
+// Account-based loyalty in Supabase.
+export const getLoyalty = async (userId) => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const currentUser = sessionData.session?.user;
+  if (!currentUser) throw new Error("Du må være logget inn");
 
-export const transferStamps = (fromDeviceId, toDeviceId) =>
-  api
-    .post("/admin/loyalty/transfer", {
-      from_device_id: fromDeviceId,
-      to_device_id: toDeviceId,
+  if (currentUser.id === userId) {
+    const { data, error } = await supabase.rpc("ensure_loyalty_card");
+    throwIfError(error);
+    const row = Array.isArray(data) ? data[0] : data;
+    return normalizeCard(row, {
+      full_name: currentUser.user_metadata?.full_name,
+      phone: currentUser.user_metadata?.phone,
+      email: currentUser.email,
+    });
+  }
+
+  const { data: row, error } = await supabase
+    .from("loyalty_cards")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+  throwIfError(error);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name,phone")
+    .eq("id", userId)
+    .maybeSingle();
+  return normalizeCard(row, profile);
+};
+
+export const saveLoyaltyProfile = async (_userId, name, phone) => {
+  const { data: authData, error: authError } = await supabase.auth.updateUser({
+    data: { full_name: name, phone },
+  });
+  throwIfError(authError);
+  const user = authData.user;
+  const { error } = await supabase.from("profiles").upsert({
+    id: user.id,
+    full_name: name,
+    phone,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "id" });
+  throwIfError(error);
+  return { name, phone };
+};
+
+export const listLoyalty = async () => {
+  const [{ data: cards, error }, { data: profiles, error: profilesError }] = await Promise.all([
+    supabase.from("loyalty_cards").select("*").order("updated_at", { ascending: false }),
+    supabase.from("profiles").select("id,full_name,phone"),
+  ]);
+  throwIfError(error);
+  throwIfError(profilesError);
+  const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+  return (cards || []).map((card) => normalizeCard(card, profileMap.get(card.user_id)));
+};
+
+const changeStamp = async (userId, type) => {
+  const { data: current, error } = await supabase
+    .from("loyalty_cards")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+  throwIfError(error);
+
+  let stamps = current.stamps || 0;
+  let totalCompleted = current.total_completed || 0;
+  if (type === "stamp") {
+    if (stamps >= 10) throw new Error("Kortet er fullt");
+    stamps += 1;
+  } else if (type === "unstamp") {
+    stamps = Math.max(0, stamps - 1);
+  } else if (type === "reset") {
+    if (stamps >= 10) totalCompleted += 1;
+    stamps = 0;
+  }
+
+  const now = new Date().toISOString();
+  const { data: updated, error: updateError } = await supabase
+    .from("loyalty_cards")
+    .update({
+      stamps,
+      total_completed: totalCompleted,
+      last_stamped_at: type === "stamp" ? now : current.last_stamped_at,
+      updated_at: now,
     })
-    .then((r) => r.data);
-export const listLoyalty = () => api.get("/admin/loyalty").then((r) => r.data);
-export const getLoyaltyHistory = (deviceId) =>
-  api.get(`/admin/loyalty/${deviceId}/history`).then((r) => r.data);
+    .eq("user_id", userId)
+    .select("*")
+    .single();
+  throwIfError(updateError);
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const { error: eventError } = await supabase.from("loyalty_events").insert({
+    user_id: userId,
+    event_type: type,
+    stamps_after: stamps,
+    created_by: sessionData.session?.user?.id || null,
+  });
+  throwIfError(eventError);
+  return normalizeCard(updated);
+};
+
+export const stampLoyalty = (userId) => changeStamp(userId, "stamp");
+export const unstampLoyalty = (userId) => changeStamp(userId, "unstamp");
+export const resetLoyalty = (userId) => changeStamp(userId, "reset");
+
+export const getLoyaltyHistory = async (userId) => {
+  const [card, { data: events, error }] = await Promise.all([
+    getLoyalty(userId),
+    supabase.from("loyalty_events").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+  ]);
+  throwIfError(error);
+  return {
+    card,
+    events: (events || []).map((event) => ({ ...event, type: event.event_type })),
+  };
+};
+
+export const deleteCustomer = async (userId) => {
+  const { error } = await supabase.from("loyalty_cards").delete().eq("user_id", userId);
+  throwIfError(error);
+  return { deleted: true };
+};
+export const transferStamps = async () => { throw new Error("Overføring er ikke tilgjengelig for kontobaserte kort"); };
+
+// In-app notifications.
+export const listNotifications = async () => {
+  const { data, error } = await supabase.from("notifications").select("*").order("created_at", { ascending: false });
+  throwIfError(error);
+  return data || [];
+};
+export const createNotification = async (payload) => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const { data, error } = await supabase.from("notifications").insert({
+    title: payload.title,
+    message: payload.message,
+    category: payload.category || "news",
+    target_user_id: payload.target_user_id || null,
+    created_by: sessionData.session?.user?.id || null,
+  }).select("*").single();
+  throwIfError(error);
+  return data;
+};
+export const markNotificationRead = async (notificationId) => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id;
+  if (!userId) return;
+  const { error } = await supabase.from("notification_reads").upsert({ notification_id: notificationId, user_id: userId });
+  throwIfError(error);
+};
 
 export const uploadImage = (file, onProgress) => {
   const fd = new FormData();
   fd.append("file", file);
-  return api
-    .post("/upload", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-      onUploadProgress: onProgress,
-    })
-    .then((r) => ({ ...r.data, full_url: `${BACKEND_ORIGIN}${r.data.url}` }));
+  return api.post("/upload", fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: onProgress,
+  }).then((r) => ({ ...r.data, full_url: `${BACKEND_ORIGIN}${r.data.url}` }));
 };
