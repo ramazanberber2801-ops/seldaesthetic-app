@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import {
   CalendarCheck,
@@ -23,8 +23,6 @@ const items = [
 ];
 
 export default function BurgerMenu({ open, onOpen, onClose }) {
-  const openedAtRef = useRef(0);
-
   useEffect(() => {
     if (!open) return undefined;
 
@@ -42,19 +40,24 @@ export default function BurgerMenu({ open, onOpen, onClose }) {
     };
   }, [open, onClose]);
 
-  const handleOpen = (event) => {
+  const handleOpenPointerDown = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    openedAtRef.current = Date.now();
     onOpen();
   };
 
-  const handleBackdropClose = (event) => {
+  const handleOpenClick = (event) => {
+    // Keyboard-generated clicks have detail 0. Touch/mouse opening is handled
+    // on pointerdown so the later click cannot land on the newly rendered backdrop.
+    if (event.detail !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    onOpen();
+  };
 
-    // Prevent the same mobile tap that opens the menu from also closing it.
-    if (Date.now() - openedAtRef.current < 300) return;
+  const handleBackdropPointerDown = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     onClose();
   };
 
@@ -62,10 +65,11 @@ export default function BurgerMenu({ open, onOpen, onClose }) {
     <>
       <button
         type="button"
-        onClick={handleOpen}
+        onPointerDown={handleOpenPointerDown}
+        onClick={handleOpenClick}
         aria-label="Åpne meny"
         aria-expanded={open}
-        className="fixed top-4 left-4 z-40 h-11 w-11 rounded-full bg-white/95 backdrop-blur-xl border border-[#EBE5DC] shadow-sm flex items-center justify-center text-[#2C2A26] no-tap-highlight"
+        className="fixed top-4 left-4 z-40 h-11 w-11 rounded-full bg-white/95 backdrop-blur-xl border border-[#EBE5DC] shadow-sm flex items-center justify-center text-[#2C2A26] no-tap-highlight touch-manipulation"
         data-testid="open-burger-menu"
       >
         <Menu size={22} strokeWidth={1.6} />
@@ -75,12 +79,13 @@ export default function BurgerMenu({ open, onOpen, onClose }) {
         <div className="fixed inset-0 z-50" data-testid="burger-menu">
           <div
             className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
-            onClick={handleBackdropClose}
+            onPointerDown={handleBackdropPointerDown}
             aria-hidden="true"
           />
 
           <aside
             className="absolute inset-y-0 left-0 w-[86%] max-w-sm bg-[#FBF9F5] shadow-2xl flex flex-col"
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="px-6 pt-[max(env(safe-area-inset-top),1.25rem)] pb-5 border-b border-[#EBE5DC] flex items-center justify-between">
