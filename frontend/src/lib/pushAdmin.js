@@ -33,8 +33,8 @@ export async function sendPushNotification(payload = {}) {
 
   if (data?.error) throw new Error(data.error);
   if (data?.failed > 0 && data?.sent === 0) {
-    throw new Error(data?.errors?.[0]?.message || "Firebase avviste push-varselet");
+    throw new Error(data?.errors?.[0]?.message || "Push-varselet kunne ikke leveres");
   }
 
-  return data || { sent: 0, failed: 0 };
+  return data || { sent: 0, failed: 0, removed: 0 };
 }
