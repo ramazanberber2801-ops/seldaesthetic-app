@@ -11,6 +11,7 @@ export const firebaseConfig = {
 
 const VAPID_KEY = ["BGBbttc3n0vxe18dAAVQ7X793-7Xg9Q8jJILNOzs4cixmoFoKhLEx0qJZ-", "JWA_EXZjcOcnH3przUtKJBJK36kUU"].join("");
 const DEVICE_KEY = "seldaesthetic-push-device-id";
+let foregroundListenerAttached = false;
 
 function getDeviceId() {
   let id = localStorage.getItem(DEVICE_KEY);
@@ -45,6 +46,30 @@ async function getFirebaseMessaging() {
   return firebase.messaging();
 }
 
+function attachForegroundListener(messaging, registration) {
+  if (foregroundListenerAttached) return;
+  foregroundListenerAttached = true;
+
+  messaging.onMessage(async (payload) => {
+    const title = payload?.notification?.title || payload?.data?.title || "Seldaesthetic";
+    const body = payload?.notification?.body || payload?.data?.body || payload?.data?.message || "Du har fått et nytt varsel";
+    const url = payload?.data?.url || "/varsler";
+
+    try {
+      await registration.showNotification(title, {
+        body,
+        icon: "/logo192.png",
+        badge: "/logo192.png",
+        vibrate: [200, 100, 200],
+        data: { url },
+        tag: `seldaesthetic-${Date.now()}`,
+      });
+    } catch (error) {
+      console.warn("Kunne ikke vise push-varsel i forgrunnen:", error);
+    }
+  });
+}
+
 export async function registerPushNotifications(userId = null, { requestPermission = false } = {}) {
   if (!("serviceWorker" in navigator) || !("Notification" in window)) return null;
   if (Notification.permission === "denied") return null;
@@ -56,6 +81,8 @@ export async function registerPushNotifications(userId = null, { requestPermissi
 
   const registration = await navigator.serviceWorker.ready;
   const messaging = await getFirebaseMessaging();
+  attachForegroundListener(messaging, registration);
+
   const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
   if (!token) return null;
 
