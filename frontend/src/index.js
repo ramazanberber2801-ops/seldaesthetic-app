@@ -30,7 +30,11 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
       const params = new URLSearchParams(firebaseConfig);
-      await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${params.toString()}`);
+      const registration = await navigator.serviceWorker.register(
+        `/firebase-messaging-sw.js?${params.toString()}`,
+        { updateViaCache: "none" },
+      );
+      await registration.update();
     } catch (error) {
       console.error("Push service worker registration failed:", error);
     }
