@@ -25,16 +25,20 @@ root.render(
   </React.StrictMode>,
 );
 
-// Disable the previous service worker temporarily. Its controllerchange listener
-// reloaded the page whenever a new deployment activated, which could look like
-// the app was refreshing by itself while it was open.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map((registration) => registration.unregister()));
+      const params = new URLSearchParams({
+        apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "",
+        authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "",
+        projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "",
+        storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "",
+        messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "",
+        appId: process.env.REACT_APP_FIREBASE_APP_ID || "",
+      });
+      await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${params.toString()}`);
     } catch (error) {
-      console.error("Service worker cleanup failed:", error);
+      console.error("Push service worker registration failed:", error);
     }
   });
 }
