@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { enablePushNotifications, registerPushNotifications } from "@/lib/pushNotifications";
+import {
+  enablePushNotifications,
+  hasUserDisabledPushNotifications,
+  registerPushNotifications,
+} from "@/lib/pushNotifications";
 
 export default function PushPermissionPrompt() {
   const { user } = useAuth();
@@ -11,6 +15,7 @@ export default function PushPermissionPrompt() {
 
   useEffect(() => {
     if (!("Notification" in window)) return;
+    if (hasUserDisabledPushNotifications()) return;
     if (Notification.permission === "granted") {
       registerPushNotifications(user?.id || null).catch((error) => console.warn("Push token refresh failed:", error));
       return;
