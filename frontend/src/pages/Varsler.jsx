@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { enablePushNotifications, registerPushNotifications } from "@/lib/pushNotifications";
 import { toast } from "sonner";
 
+const NOTIFICATION_LIFETIME_MS = 48 * 60 * 60 * 1000;
+
 export default function Varsler() {
   const { user, profile, loading: authLoading } = useAuth();
   const [items, setItems] = useState([]);
@@ -17,8 +19,11 @@ export default function Varsler() {
     if (authLoading) return;
     listNotifications()
       .then((data) => {
+        const cutoff = Date.now() - NOTIFICATION_LIFETIME_MS;
         const filtered = (data || []).filter((item) => {
+          if (!item.created_at || new Date(item.created_at).getTime() < cutoff) return false;
           if (!user) return !item.target_user_id && (item.category === "offers" || item.category === "news");
+          if (item.target_user_id && item.target_user_id !== user.id) return false;
           if (item.category === "offers") return profile?.notifications_offers ?? true;
           if (item.category === "loyalty") return profile?.notifications_loyalty ?? true;
           return profile?.notifications_news ?? true;
@@ -102,7 +107,7 @@ export default function Varsler() {
             ))}
           </div>
         ) : (
-          <div className="rounded-3xl border border-[#EBE5DC] bg-white p-8 text-center text-sm text-[#6B655B]">Ingen tilbud eller nyheter ennå.</div>
+          <div className="rounded-3xl border border-[#EBE5DC] bg-white p-8 text-center text-sm text-[#6B655B]">Ingen aktive tilbud eller nyheter.</div>
         )}
       </div>
     </div>
