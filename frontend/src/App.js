@@ -15,6 +15,7 @@ import Varsler from "@/pages/Varsler";
 import Admin from "@/pages/AdminHub";
 import AdminSettings from "@/pages/AdminSettings";
 import AdminNotifications from "@/pages/AdminNotifications";
+import AdminLoyaltyCampaigns from "@/pages/AdminLoyaltyCampaigns";
 import InstallPrompt from "@/components/InstallPrompt";
 import PushPermissionPrompt from "@/components/PushPermissionPrompt";
 
@@ -37,6 +38,7 @@ function App() {
           <Route path="/admin" element={<ProtectedAdminRoute><Admin /></ProtectedAdminRoute>} />
           <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
           <Route path="/admin/notifications" element={<ProtectedAdminRoute><AdminNotifications /></ProtectedAdminRoute>} />
+          <Route path="/admin/loyalty-campaigns" element={<ProtectedAdminRoute><AdminLoyaltyCampaigns /></ProtectedAdminRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
