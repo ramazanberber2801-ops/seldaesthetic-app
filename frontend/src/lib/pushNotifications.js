@@ -1,7 +1,8 @@
 import { supabase } from "@/lib/supabase";
+import { getCurrentClinicId } from "@/lib/currentClinic";
 
-const DEVICE_KEY = "seldaesthetic-push-device-id";
-const PUSH_ENABLED_KEY = "seldaesthetic-push-enabled";
+const DEVICE_KEY = "yasaflow-push-device-id";
+const PUSH_ENABLED_KEY = "yasaflow-push-enabled";
 const SERVICE_WORKER_PATH = "/firebase-messaging-sw.js";
 
 function getDeviceId() {
@@ -28,8 +29,10 @@ function sameApplicationServerKey(subscription, expectedKey) {
   return currentBytes.every((value, index) => value === expectedKey[index]);
 }
 
-async function getPublicKey() {
-  const { data, error } = await supabase.rpc("get_web_push_public_key");
+async function getPublicKey(clinicId) {
+  const { data, error } = await supabase.rpc("get_web_push_public_key", {
+    p_clinic_id: clinicId,
+  });
   if (error) throw error;
   if (!data) throw new Error("Push-nøkkelen mangler");
   return data;
@@ -66,8 +69,9 @@ export async function registerPushNotifications(_userId = null, { requestPermiss
   }
   if (Notification.permission !== "granted") return null;
 
+  const clinicId = await getCurrentClinicId();
   const registration = await getServiceWorkerRegistration();
-  const publicKey = await getPublicKey();
+  const publicKey = await getPublicKey(clinicId);
   const applicationServerKey = urlBase64ToUint8Array(publicKey);
   let subscription = await registration.pushManager.getSubscription();
 
@@ -85,6 +89,7 @@ export async function registerPushNotifications(_userId = null, { requestPermiss
 
   const json = subscription.toJSON();
   const { error } = await supabase.rpc("register_web_push_subscription", {
+    p_clinic_id: clinicId,
     p_device_id: getDeviceId(),
     p_endpoint: subscription.endpoint,
     p_subscription: json,
@@ -115,6 +120,10 @@ export async function disablePushNotifications() {
 
   const deviceId = localStorage.getItem(DEVICE_KEY);
   if (!deviceId) return;
-  const { error } = await supabase.rpc("disable_web_push_subscription", { p_device_id: deviceId });
+  const clinicId = await getCurrentClinicId();
+  const { error } = await supabase.rpc("disable_web_push_subscription", {
+    p_clinic_id: clinicId,
+    p_device_id: deviceId,
+  });
   if (error) throw error;
 }
