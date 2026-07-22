@@ -21,7 +21,6 @@ export default function Kontakt() {
       <div className="px-5 mt-6 space-y-4">
         <div className="bg-white rounded-3xl p-6 border border-[#EBE5DC]/60 shadow-[0_4px_24px_rgba(44,42,38,0.05)]">
           <div className="flex flex-col items-center text-center pb-5 border-b border-[#EBE5DC]">
-            <BrandMonogram />
             <h2 className="font-serif-display text-3xl text-[#2C2A26]">{settings.clinic_name}</h2>
             <div className="flex items-center gap-3 mt-2">
               <span className="h-px w-5 bg-[#C5A059]/60" />
@@ -51,29 +50,6 @@ export default function Kontakt() {
           <iframe title={`${settings.clinic_name} kart`} src={`https://www.google.com/maps?q=${mapsQuery}&output=embed`} style={{ width: "100%", height: "240px", border: "none" }} loading="lazy" data-testid="contact-map-iframe" />
         </div>
       </div>
-    </div>
-  );
-}
-
-function BrandMonogram() {
-  return (
-    <div className="w-24 h-24 mb-3" aria-label="Seldaesthetic-logo" role="img">
-      <svg viewBox="0 0 200 200" className="w-full h-full" xmlns="http://www.w3.org/2000/svg" shapeRendering="geometricPrecision">
-        <defs>
-          <linearGradient id="seGold" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#D7BE7A" />
-            <stop offset="52%" stopColor="#B89443" />
-            <stop offset="100%" stopColor="#8F6A21" />
-          </linearGradient>
-        </defs>
-        <g fill="none" stroke="url(#seGold)" strokeLinecap="square" strokeLinejoin="miter">
-          <path d="M84 42H39v47h45" strokeWidth="7" />
-          <path d="M84 89H47v50h37" strokeWidth="7" />
-          <path d="M116 111h42v-37h-42" strokeWidth="7" />
-          <path d="M116 111h34v47h-34" strokeWidth="7" />
-          <path d="M58 154L142 46" strokeWidth="9" />
-        </g>
-      </svg>
     </div>
   );
 }
