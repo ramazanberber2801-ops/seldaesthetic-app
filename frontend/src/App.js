@@ -53,7 +53,8 @@ function App() {
           <Route path="/admin/notifications" element={<ProtectedAdminRoute><AdminNotifications /></ProtectedAdminRoute>} />
           <Route path="/admin/loyalty-campaigns" element={<ProtectedAdminRoute><AdminLoyaltyCampaigns /></ProtectedAdminRoute>} />
           <Route path="/admin/app-install" element={<ProtectedAdminRoute><AdminAppInstall /></ProtectedAdminRoute>} />
-          <Route path="/yasaflow-admin" element={<ProtectedPlatformRoute><PlatformAdmin /></ProtectedPlatformRoute>} />
+          <Route path="/clinic-platform-admin" element={<ProtectedPlatformRoute><PlatformAdmin /></ProtectedPlatformRoute>} />
+          <Route path="/yasaflow-admin" element={<Navigate to="/clinic-platform-admin" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
