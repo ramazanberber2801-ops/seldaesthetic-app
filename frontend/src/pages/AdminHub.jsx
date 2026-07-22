@@ -1,12 +1,24 @@
 import { Link } from "react-router-dom";
-import { Bell, Gift, QrCode, Settings } from "lucide-react";
+import { Bell, Building2, Gift, QrCode, Settings } from "lucide-react";
 import AdminV2 from "@/pages/AdminV2";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminHub() {
+  const { isPlatformAdmin } = useAuth();
+
   return (
     <div className="relative">
       <AdminV2 />
       <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3">
+        {isPlatformAdmin && (
+          <Link
+            to="/yasaflow-admin"
+            className="flex h-14 items-center gap-2 rounded-full bg-[#7C5CFC] px-5 text-sm text-white shadow-xl"
+            aria-label="Åpne Yasaflow Admin"
+          >
+            <Building2 size={18} />Yasaflow Admin
+          </Link>
+        )}
         <Link
           to="/admin/app-install"
           className="flex h-14 items-center gap-2 rounded-full bg-[#C5A059] px-5 text-sm text-white shadow-xl"
