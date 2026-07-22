@@ -13,25 +13,29 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useClinicSettings } from "@/contexts/ClinicSettingsContext";
 
 export default function BurgerMenu({ open, onOpen, onClose }) {
   const { user, profile, loading } = useAuth();
+  const { settings } = useClinicSettings();
   const profileLabel = loading
     ? "Min profil"
     : user
       ? profile?.full_name || user?.user_metadata?.full_name || "Min profil"
       : "Logg inn / Opprett konto";
 
+  const clinicName = settings.clinic_name || "Klinikk";
+  const location = settings.address?.split(",").pop()?.trim();
   const items = [
-    { to: "/", label: "Hjem", icon: Home, end: true },
-    { to: "/bestill", label: "Bestill time", icon: CalendarCheck },
-    { to: "/lojalitet", label: "Lojalitetskort", icon: Heart },
-    { to: "/gavekort", label: "Gavekort", icon: Gift },
-    { to: "/varsler", label: "Varsler og tilbud", icon: Bell },
-    { to: "/profil", label: profileLabel, icon: UserRound },
-    { to: "/kontakt", label: "Kontakt", icon: MapPin },
-    { to: "/om", label: "Om Seldaesthetic", icon: Info },
-  ];
+    { to: "/", label: "Hjem", icon: Home, end: true, enabled: true },
+    { to: "/bestill", label: "Bestill time", icon: CalendarCheck, enabled: settings.booking_enabled },
+    { to: "/lojalitet", label: "Lojalitetskort", icon: Heart, enabled: settings.loyalty_enabled },
+    { to: "/gavekort", label: "Gavekort", icon: Gift, enabled: settings.gift_card_enabled },
+    { to: "/varsler", label: "Varsler og tilbud", icon: Bell, enabled: settings.push_enabled || settings.campaigns_enabled },
+    { to: "/profil", label: profileLabel, icon: UserRound, enabled: true },
+    { to: "/kontakt", label: "Kontakt", icon: MapPin, enabled: true },
+    { to: "/om", label: `Om ${clinicName}`, icon: Info, enabled: true },
+  ].filter((item) => item.enabled);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -61,7 +65,7 @@ export default function BurgerMenu({ open, onOpen, onClose }) {
         <button type="button" tabIndex={open ? 0 : -1} className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} aria-label="Lukk meny" />
         <aside id="burger-menu-panel" className={`absolute inset-y-0 right-0 w-[86%] max-w-sm bg-[#FBF9F5] shadow-2xl flex flex-col transition-transform duration-200 ease-out ${open ? "translate-x-0" : "translate-x-full"}`} onClick={(event) => event.stopPropagation()}>
           <div className="px-6 pt-[max(env(safe-area-inset-top),1.25rem)] pb-5 pr-20 border-b border-[#EBE5DC]">
-            <p className="font-serif text-xl text-[#2C2A26]">Seldaesthetic</p>
+            <p className="font-serif text-xl text-[#2C2A26]">{clinicName}</p>
             <p className="text-xs text-[#8A8378] mt-1">{user ? `Innlogget som ${profileLabel}` : "Din klinikkapp"}</p>
           </div>
           <nav className="flex-1 overflow-y-auto px-4 py-5">
@@ -74,7 +78,7 @@ export default function BurgerMenu({ open, onOpen, onClose }) {
               ))}
             </div>
           </nav>
-          <div className="px-6 py-5 border-t border-[#EBE5DC] text-xs text-[#8A8378]">Seldaesthetic · Mjøndalen</div>
+          <div className="px-6 py-5 border-t border-[#EBE5DC] text-xs text-[#8A8378]">{clinicName}{location ? ` · ${location}` : ""}</div>
         </aside>
       </div>
     </>
