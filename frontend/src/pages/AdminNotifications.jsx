@@ -3,6 +3,7 @@ import { ArrowLeft, Bell, Clock3, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { getCurrentClinicId } from "@/lib/currentClinic";
 
 const formatTimeLeft = (expiresAt) => {
   const remaining = new Date(expiresAt).getTime() - Date.now();
@@ -24,14 +25,22 @@ export default function AdminNotifications() {
 
   const refresh = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message || "Kunne ikke laste varsler");
-    setItems(data || []);
-    setLoading(false);
+    try {
+      const clinicId = await getCurrentClinicId();
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setItems(data || []);
+    } catch (error) {
+      toast.error(error.message || "Kunne ikke laste varsler");
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { refresh(); }, []);
@@ -46,13 +55,21 @@ export default function AdminNotifications() {
   const remove = async (item) => {
     if (!window.confirm(`Slette varselet «${item.title}» permanent? Dette kan ikke angres.`)) return;
     setDeleting(item.id);
-    const { error } = await supabase.from("notifications").delete().eq("id", item.id);
-    if (error) toast.error(error.message || "Kunne ikke slette varselet");
-    else {
+    try {
+      const clinicId = await getCurrentClinicId();
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", item.id)
+        .eq("clinic_id", clinicId);
+      if (error) throw error;
       setItems((current) => current.filter((entry) => entry.id !== item.id));
       toast.success("Varselet er permanent slettet");
+    } catch (error) {
+      toast.error(error.message || "Kunne ikke slette varselet");
+    } finally {
+      setDeleting(null);
     }
-    setDeleting(null);
   };
 
   return (
