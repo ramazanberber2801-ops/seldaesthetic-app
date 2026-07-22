@@ -112,18 +112,19 @@ export async function enablePushNotifications(userId = null) {
 export async function disablePushNotifications() {
   localStorage.setItem(PUSH_ENABLED_KEY, "0");
 
+  const deviceId = localStorage.getItem(DEVICE_KEY);
+  if (deviceId) {
+    const clinicId = await getCurrentClinicId();
+    const { error } = await supabase.rpc("disable_web_push_subscription", {
+      p_clinic_id: clinicId,
+      p_device_id: deviceId,
+    });
+    if (error) throw error;
+  }
+
   if ("serviceWorker" in navigator) {
     const registration = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_PATH);
     const subscription = await registration?.pushManager.getSubscription();
     if (subscription) await subscription.unsubscribe();
   }
-
-  const deviceId = localStorage.getItem(DEVICE_KEY);
-  if (!deviceId) return;
-  const clinicId = await getCurrentClinicId();
-  const { error } = await supabase.rpc("disable_web_push_subscription", {
-    p_clinic_id: clinicId,
-    p_device_id: deviceId,
-  });
-  if (error) throw error;
 }
