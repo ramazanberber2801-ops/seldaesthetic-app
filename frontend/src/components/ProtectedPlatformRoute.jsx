@@ -9,7 +9,7 @@ export default function ProtectedPlatformRoute({ children }) {
     return (
       <div className="min-h-screen bg-[#F8F5F0] px-5 py-10">
         <div className="mx-auto max-w-md rounded-3xl border border-[#EBE5DC] bg-white p-6 text-sm text-[#6B655B]">
-          Kontrollerer Yasaflow-tilgang …
+          Kontrollerer tilgang til Yasaflow Clinic plattformadmin …
         </div>
       </div>
     );
