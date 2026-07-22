@@ -27,6 +27,23 @@ export function ClinicSettingsProvider({ children }) {
     refresh();
   }, []);
 
+  useEffect(() => {
+    const clinicName = settings.clinic_name?.trim() || "Klinikk";
+    const subtitle = settings.subtitle?.trim();
+    const title = subtitle ? `${clinicName} – ${subtitle}` : clinicName;
+    const description = subtitle
+      ? `${clinicName} – ${subtitle}`
+      : `${clinicName} sin klinikkapp`;
+
+    document.title = title;
+
+    const descriptionMeta = document.querySelector('meta[name="description"]');
+    if (descriptionMeta) descriptionMeta.setAttribute("content", description);
+
+    const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (appleTitle) appleTitle.setAttribute("content", clinicName);
+  }, [settings.clinic_name, settings.subtitle]);
+
   const value = useMemo(() => ({ settings, loading, refresh }), [settings, loading]);
 
   return (
