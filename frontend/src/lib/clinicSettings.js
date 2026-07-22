@@ -1,8 +1,9 @@
+import { APP_CONFIG } from "@/config/appConfig";
 import { supabase } from "@/lib/supabase";
 import { getCurrentClinicId } from "@/lib/currentClinic";
 
 export const DEFAULT_CLINIC_SETTINGS = {
-  id: "main",
+  id: null,
   clinic_id: null,
   clinic_name: "",
   subtitle: "",
@@ -51,7 +52,7 @@ export async function updateClinicSettings(values) {
     : [];
 
   const payload = {
-    id: values.id || "main",
+    id: values.id || `${APP_CONFIG.settingsRecordKey}:${clinicId}`,
     clinic_id: clinicId,
     clinic_name: text(values.clinic_name),
     subtitle: text(values.subtitle),
