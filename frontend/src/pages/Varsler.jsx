@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Clock3 } from "lucide-react";
 import Header from "@/components/Header";
 import { listNotifications, markNotificationRead } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +10,13 @@ import {
 } from "@/lib/pushNotifications";
 import { toast } from "sonner";
 
-const NOTIFICATION_LIFETIME_MS = 48 * 60 * 60 * 1000;
+const getExpiresAt = (item) => item.expires_at || new Date(new Date(item.created_at).getTime() + 48 * 60 * 60 * 1000).toISOString();
+const formatTimeLeft = (item) => {
+  const remaining = new Date(getExpiresAt(item)).getTime() - Date.now();
+  if (remaining <= 0) return "Utløpt";
+  const hours = Math.ceil(remaining / 3600000);
+  return hours > 24 ? `${Math.ceil(hours / 24)} døgn igjen` : `${hours} timer igjen`;
+};
 
 export default function Varsler() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -24,9 +30,9 @@ export default function Varsler() {
     if (authLoading) return;
     listNotifications()
       .then((data) => {
-        const cutoff = Date.now() - NOTIFICATION_LIFETIME_MS;
+        const now = Date.now();
         const filtered = (data || []).filter((item) => {
-          if (!item.created_at || new Date(item.created_at).getTime() < cutoff) return false;
+          if (new Date(getExpiresAt(item)).getTime() <= now) return false;
           if (!user) return !item.target_user_id && (item.category === "offers" || item.category === "news");
           if (item.target_user_id && item.target_user_id !== user.id) return false;
           if (item.category === "offers") return profile?.notifications_offers ?? true;
@@ -38,6 +44,13 @@ export default function Varsler() {
       .catch((error) => toast.error(error.message || "Kunne ikke laste varsler"))
       .finally(() => setLoading(false));
   }, [authLoading, user, profile]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setItems((current) => current.filter((item) => new Date(getExpiresAt(item)).getTime() > Date.now()));
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -83,7 +96,7 @@ export default function Varsler() {
 
   return (
     <div data-testid="page-varsler">
-      <Header title="Varsler og tilbud" subtitle="Meldinger fra Seldaesthetic" icon={Bell} />
+      <Header title="Varsler og tilbud" subtitle="Meldinger fra klinikken" icon={Bell} />
       <div className="px-5 py-6 space-y-4">
         <div className="rounded-3xl border border-[#EBE5DC] bg-white p-5 shadow-sm">
           <h2 className="font-serif-display text-xl text-[#2C2A26]">Få tilbud direkte på telefonen</h2>
@@ -112,7 +125,7 @@ export default function Varsler() {
               </button>
             </div>
           )}
-          <p className="mt-3 text-xs text-[#9C968C]">Du kan når som helst slå varsler av eller på.</p>
+          <p className="mt-3 text-xs text-[#9C968C]">Varsler vises i opptil 48 timer og fjernes deretter permanent.</p>
         </div>
 
         {authLoading || loading ? (
@@ -126,7 +139,10 @@ export default function Varsler() {
                     <div className="text-[10px] uppercase tracking-[0.18em] text-[#B89953]">{item.category === "offers" ? "Tilbud" : item.category === "loyalty" ? "Lojalitet" : "Nyhet"}</div>
                     <h2 className="mt-1 font-serif-display text-xl text-[#2C2A26]">{item.title}</h2>
                     <p className="mt-2 text-sm leading-6 text-[#6B655B]">{item.message}</p>
-                    <p className="mt-3 text-[10px] text-[#9C968C]">{new Date(item.created_at).toLocaleString("no-NO")}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-[#9C968C]">
+                      <span>{new Date(item.created_at).toLocaleString("no-NO")}</span>
+                      <span className="flex items-center gap-1 rounded-full bg-[#F4F0EA] px-2 py-1 text-[#6B655B]"><Clock3 size={11} />{formatTimeLeft(item)}</span>
+                    </div>
                   </div>
                   {user && (
                     <button type="button" onClick={() => markRead(item.id)} className="rounded-full bg-[#F4ECD8] p-2 text-[#8C6B2F]" aria-label="Marker som lest">
