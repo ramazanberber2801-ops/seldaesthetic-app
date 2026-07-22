@@ -1,7 +1,11 @@
 import { Gift } from "lucide-react";
 import Header from "@/components/Header";
+import EmbeddedTimmaFrame from "@/components/EmbeddedTimmaFrame";
+import { useClinicSettings } from "@/contexts/ClinicSettingsContext";
 
 export default function Gavekort() {
+  const { settings } = useClinicSettings();
+
   return (
     <div data-testid="page-gavekort" className="min-h-screen bg-paper">
       <Header
@@ -11,13 +15,11 @@ export default function Gavekort() {
       />
 
       <section className="mt-2 w-full" aria-label="Kjøp gavekort">
-        <iframe
-          title="Kjøp gavekort hos Seldaesthetic"
-          src="https://bestill.timma.no/giftcard/seldaesthetic"
-          data-testid="gavekort-iframe"
-          className="block w-full bg-white"
-          style={{ height: "calc(100vh - 190px)", minHeight: "760px", border: "none" }}
-          allow="payment; clipboard-write"
+        <EmbeddedTimmaFrame
+          title={`Gavekort hos ${settings.clinic_name || "klinikken"}`}
+          configuredUrl={settings.gift_card_url}
+          fallbackUrl="https://bestill.timma.no/giftcard/seldaesthetic"
+          testId="gavekort-iframe"
         />
       </section>
     </div>
