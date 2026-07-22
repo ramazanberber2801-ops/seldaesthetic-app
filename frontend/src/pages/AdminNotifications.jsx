@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Bell, Clock3, Eye, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Bell, Clock3, Eye, Percent, Trash2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +16,11 @@ const formatTimeLeft = (expiresAt) => {
   return `${minutes} min igjen`;
 };
 
+const getOpenRate = (opened, recipients) => {
+  if (!recipients) return 0;
+  return Math.min(100, Math.round((opened / recipients) * 100));
+};
+
 export default function AdminNotifications() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
@@ -27,13 +32,22 @@ export default function AdminNotifications() {
     setLoading(true);
     try {
       const clinicId = await getCurrentClinicId();
-      const { data: notifications, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("clinic_id", clinicId)
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false });
+      const [{ data: notifications, error }, { count: customerCount, error: customerError }] = await Promise.all([
+        supabase
+          .from("notifications")
+          .select("*")
+          .eq("clinic_id", clinicId)
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("clinic_members")
+          .select("user_id", { count: "exact", head: true })
+          .eq("clinic_id", clinicId)
+          .eq("role", "customer")
+          .eq("status", "active"),
+      ]);
       if (error) throw error;
+      if (customerError) throw customerError;
 
       const ids = (notifications || []).map((item) => item.id);
       let readCounts = new Map();
@@ -50,10 +64,16 @@ export default function AdminNotifications() {
         }, new Map());
       }
 
-      setItems((notifications || []).map((item) => ({
-        ...item,
-        read_count: readCounts.get(item.id) || 0,
-      })));
+      setItems((notifications || []).map((item) => {
+        const readCount = readCounts.get(item.id) || 0;
+        const recipientCount = item.target_user_id ? 1 : customerCount || 0;
+        return {
+          ...item,
+          read_count: readCount,
+          recipient_count: recipientCount,
+          open_rate: getOpenRate(readCount, recipientCount),
+        };
+      }));
     } catch (error) {
       toast.error(error.message || "Kunne ikke laste varsler");
       setItems([]);
@@ -71,10 +91,16 @@ export default function AdminNotifications() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const totals = useMemo(() => ({
-    active: items.length,
-    opened: items.reduce((sum, item) => sum + (item.read_count || 0), 0),
-  }), [items]);
+  const totals = useMemo(() => {
+    const opened = items.reduce((sum, item) => sum + (item.read_count || 0), 0);
+    const recipients = items.reduce((sum, item) => sum + (item.recipient_count || 0), 0);
+    return {
+      active: items.length,
+      opened,
+      recipients,
+      openRate: getOpenRate(opened, recipients),
+    };
+  }, [items]);
 
   const remove = async (item) => {
     if (!window.confirm(`Slette varselet «${item.title}» permanent? Dette kan ikke angres.`)) return;
@@ -114,8 +140,16 @@ export default function AdminNotifications() {
             <div className="mt-2 text-2xl font-semibold text-[#2C2A26]">{totals.active}</div>
           </div>
           <div className="rounded-2xl border border-[#EBE5DC] bg-white p-4">
+            <div className="flex items-center gap-2 text-xs text-[#8C857B]"><Users size={15} />Estimerte mottakere</div>
+            <div className="mt-2 text-2xl font-semibold text-[#2C2A26]">{totals.recipients}</div>
+          </div>
+          <div className="rounded-2xl border border-[#EBE5DC] bg-white p-4">
             <div className="flex items-center gap-2 text-xs text-[#8C857B]"><Eye size={15} />Registrerte åpninger</div>
             <div className="mt-2 text-2xl font-semibold text-[#2C2A26]">{totals.opened}</div>
+          </div>
+          <div className="rounded-2xl border border-[#EBE5DC] bg-white p-4">
+            <div className="flex items-center gap-2 text-xs text-[#8C857B]"><Percent size={15} />Åpningsrate</div>
+            <div className="mt-2 text-2xl font-semibold text-[#2C2A26]">{totals.openRate}%</div>
           </div>
         </div>
 
@@ -129,7 +163,8 @@ export default function AdminNotifications() {
                 <span>{new Date(item.created_at).toLocaleString("no-NO")}</span>
                 <span className="flex items-center gap-1 rounded-full bg-[#F4F0EA] px-2 py-1 text-[#6B655B]"><Clock3 size={11} />{formatTimeLeft(item.expires_at)}</span>
                 <span className="flex items-center gap-1 rounded-full bg-[#EEF4EC] px-2 py-1 text-[#557153]"><Eye size={11} />{item.read_count || 0} åpnet</span>
-                <span className="flex items-center gap-1 rounded-full bg-[#F4F0EA] px-2 py-1 text-[#6B655B]"><Users size={11} />{item.target_user_id ? "1 mottaker" : "Alle kunder"}</span>
+                <span className="flex items-center gap-1 rounded-full bg-[#F4F0EA] px-2 py-1 text-[#6B655B]"><Users size={11} />{item.recipient_count || 0} mottakere</span>
+                <span className="flex items-center gap-1 rounded-full bg-[#EEF1F7] px-2 py-1 text-[#58667D]"><Percent size={11} />{item.open_rate || 0}%</span>
               </div>
             </div>
             <button disabled={deleting === item.id} onClick={() => remove(item)} className="rounded-full bg-[#F8EAEA] p-2 text-[#9E4747] disabled:opacity-50" aria-label="Slett varsel permanent"><Trash2 size={17} /></button>
