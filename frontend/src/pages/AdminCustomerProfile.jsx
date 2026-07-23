@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getCurrentClinicId } from "@/lib/currentClinic";
-import { sendPushNotification } from "@/lib/pushNotifications";
+import { sendPushNotification } from "@/lib/pushAdmin";
 
 export default function AdminCustomerProfile() {
   const navigate = useNavigate();
