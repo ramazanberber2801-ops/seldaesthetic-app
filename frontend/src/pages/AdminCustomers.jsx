@@ -28,6 +28,7 @@ export default function AdminCustomers() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState([]);
+  const [clinicId, setClinicId] = useState(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedTag, setSelectedTag] = useState("");
@@ -40,11 +41,12 @@ export default function AdminCustomers() {
     let active = true;
     (async () => {
       try {
-        const clinicId = await getCurrentClinicId();
+        const currentClinicId = await getCurrentClinicId();
+        setClinicId(currentClinicId);
         const { data: members, error: memberError } = await supabase
           .from("clinic_members")
           .select("user_id,created_at")
-          .eq("clinic_id", clinicId)
+          .eq("clinic_id", currentClinicId)
           .eq("role", "customer")
           .eq("status", "active");
         if (memberError) throw memberError;
@@ -57,8 +59,8 @@ export default function AdminCustomers() {
 
         const [{ data: profiles, error: profileError }, { data: cards, error: cardError }, { data: preferences, error: preferenceError }] = await Promise.all([
           supabase.from("profiles").select("id,full_name,phone,birth_date,tags,admin_notes,updated_at").in("id", userIds),
-          supabase.from("loyalty_cards").select("user_id,stamps,stamp_goal,last_stamped_at,campaign_name").eq("clinic_id", clinicId).in("user_id", userIds),
-          supabase.from("crm_customer_preferences").select("user_id,vip,archived,last_visit_at,total_visits,lifetime_value_nok,preferred_contact_channel,marketing_consent").eq("clinic_id", clinicId).in("user_id", userIds),
+          supabase.from("loyalty_cards").select("user_id,stamps,stamp_goal,last_stamped_at,campaign_name").eq("clinic_id", currentClinicId).in("user_id", userIds),
+          supabase.from("crm_customer_preferences").select("user_id,vip,archived,last_visit_at,total_visits,lifetime_value_nok,preferred_contact_channel,marketing_consent").eq("clinic_id", currentClinicId).in("user_id", userIds),
         ]);
         if (profileError) throw profileError;
         if (cardError) throw cardError;
@@ -125,6 +127,10 @@ export default function AdminCustomers() {
       toast.error("Ingen kunder kan motta denne meldingen");
       return;
     }
+    if (!clinicId) {
+      toast.error("Klinikken kunne ikke bestemmes");
+      return;
+    }
 
     setSendingPush(true);
     try {
@@ -133,6 +139,7 @@ export default function AdminCustomers() {
         message: pushMessage,
         category: "offers",
         target_user_id: customer.id,
+        clinic_id: clinicId,
       })));
       const sent = results.filter((result) => result.status === "fulfilled").length;
       const failed = results.length - sent;
@@ -216,8 +223,8 @@ export default function AdminCustomers() {
             </div>
             <div className="mt-5 space-y-4">
               <label className="block text-xs text-[#746E65]"><span className="mb-2 block">Tittel</span><input value={pushTitle} onChange={(event) => setPushTitle(event.target.value)} className="w-full rounded-2xl border border-[#EBE5DC] px-4 py-3 outline-none focus:border-[#B89953]"/></label>
-              <label className="block text-xs text-[#746E65]"><span className="mb-2 block">Melding</span><textarea value={pushMessage} onChange={(event) => setPushMessage(event.target.value)} rows={5} className="w-full resize-none rounded-2xl border border-[#EBE5DC] px-4 py-3 outline-none focus:border-[#B89953]"/></label>
-              <button disabled={sendingPush || !pushRecipients.length} onClick={sendTagPush} className="w-full rounded-2xl bg-[#2C2A26] px-4 py-3 text-sm text-white disabled:opacity-50">{sendingPush ? "Sender …" : `Send til ${pushRecipients.length} kunder`}</button>
+              <label className="block text-xs text-[#746E65]"><span className="mb-2 block">Melding</span><textarea value={pushMessage} onChange={(event) => setPushMessage(event.target.value)} rows={4} className="w-full resize-none rounded-2xl border border-[#EBE5DC] px-4 py-3 outline-none focus:border-[#B89953]"/></label>
+              <button disabled={sendingPush} onClick={sendTagPush} className="w-full rounded-2xl bg-[#2C2A26] px-4 py-3 text-sm text-white disabled:opacity-50">{sendingPush ? "Sender …" : "Send push"}</button>
             </div>
           </div>
         </div>
@@ -227,5 +234,5 @@ export default function AdminCustomers() {
 }
 
 function Stat({ icon: Icon, label, value }) {
-  return <div className="rounded-3xl border border-[#EBE5DC] bg-white p-4"><Icon size={18} className="text-[#B89953]"/><div className="mt-3 text-2xl font-semibold">{value}</div><div className="mt-1 text-xs text-[#6B655B]">{label}</div></div>;
+  return <div className="rounded-3xl border border-[#EBE5DC] bg-white p-4"><Icon size={18} className="text-[#B89953]"/><div className="mt-3 text-2xl font-semibold">{value}</div><div className="mt-1 text-xs text-[#746E65]">{label}</div></div>;
 }
