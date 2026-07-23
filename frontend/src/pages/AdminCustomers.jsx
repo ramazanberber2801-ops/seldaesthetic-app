@@ -29,6 +29,7 @@ export default function AdminCustomers() {
   const [customers, setCustomers] = useState([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [selectedTag, setSelectedTag] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -77,10 +78,16 @@ export default function AdminCustomers() {
     return () => { active = false; };
   }, []);
 
+  const availableTags = useMemo(() => {
+    const tags = customers.flatMap((customer) => customer.tags || []);
+    return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "no"));
+  }, [customers]);
+
   const filtered = useMemo(() => {
     const text = query.trim().toLowerCase();
     return customers.filter((customer) => {
       const matchText = !text || [customer.full_name, customer.phone, ...(customer.tags || [])].filter(Boolean).some((value) => String(value).toLowerCase().includes(text));
+      const matchTag = !selectedTag || (customer.tags || []).some((tag) => tag.toLowerCase() === selectedTag.toLowerCase());
       const lastActivity = customer.preferences?.last_visit_at || customer.loyalty?.last_stamped_at || customer.updated_at;
       const nearReward = customer.loyalty && customer.loyalty.stamp_goal - customer.loyalty.stamps <= 1;
       const matchFilter = filter === "all"
@@ -88,9 +95,9 @@ export default function AdminCustomers() {
         || (filter === "near_reward" && nearReward)
         || (filter === "inactive" && daysSince(lastActivity) >= 90)
         || (filter === "vip" && customer.preferences?.vip);
-      return matchText && matchFilter && !customer.preferences?.archived;
+      return matchText && matchTag && matchFilter && !customer.preferences?.archived;
     });
-  }, [customers, query, filter]);
+  }, [customers, query, filter, selectedTag]);
 
   const stats = useMemo(() => ({
     total: customers.filter((item) => !item.preferences?.archived).length,
@@ -125,6 +132,15 @@ export default function AdminCustomers() {
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {FILTERS.map((item) => <button key={item.id} onClick={() => setFilter(item.id)} className={`whitespace-nowrap rounded-full px-3 py-2 text-xs ${filter === item.id ? "bg-[#2C2A26] text-white" : "bg-[#F4F0EA] text-[#6B655B]"}`}>{item.label}</button>)}
           </div>
+          {availableTags.length > 0 && (
+            <div className="mt-4 border-t border-[#EEE8DE] pt-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[#6B655B]"><Tags size={14}/>Filtrer etter etikett</div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <button onClick={() => setSelectedTag("")} className={`whitespace-nowrap rounded-full px-3 py-2 text-xs ${!selectedTag ? "bg-[#B89953] text-white" : "bg-[#F4F0EA] text-[#6B655B]"}`}>Alle etiketter</button>
+                {availableTags.map((tag) => <button key={tag} onClick={() => setSelectedTag(tag)} className={`whitespace-nowrap rounded-full px-3 py-2 text-xs ${selectedTag === tag ? "bg-[#B89953] text-white" : "bg-[#F4F0EA] text-[#6B655B]"}`}>{tag}</button>)}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="space-y-3">
