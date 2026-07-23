@@ -3,6 +3,31 @@ import { getCurrentClinicId } from "@/lib/currentClinic";
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 
+export async function fetchPublicInstagramComments(instagramUrl) {
+  const { data, error } = await supabase.functions.invoke("fetch-public-instagram-comments", {
+    body: { instagram_url: instagramUrl.trim() },
+  });
+
+  if (error) {
+    const context = error.context;
+    let message = "Kunne ikke hente kommentarer fra Instagram";
+    try {
+      const payload = context ? await context.json() : null;
+      if (payload?.error) message = payload.error;
+    } catch {
+      // Keep the safe fallback message when the function response is not JSON.
+    }
+    throw new Error(message);
+  }
+
+  return {
+    comments: Array.isArray(data?.comments) ? data.comments : [],
+    count: Number(data?.count || 0),
+    truncated: Boolean(data?.truncated),
+    experimental: Boolean(data?.experimental),
+  };
+}
+
 export async function createGiveawaySession({ instagramUrl, rules, participants = [] }) {
   const [{ data: sessionData }, clinicId] = await Promise.all([
     supabase.auth.getSession(),
