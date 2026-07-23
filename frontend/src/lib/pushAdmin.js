@@ -14,6 +14,7 @@ export async function sendPushNotification(payload = {}) {
       message,
       category: payload.category || "news",
       target_user_id: payload.target_user_id || null,
+      clinic_id: payload.clinic_id || null,
     },
   });
 
